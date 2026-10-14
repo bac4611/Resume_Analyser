@@ -1,33 +1,62 @@
+
 pipeline {
     agent any
+
     tools {
         nodejs 'node20'
     }
 
+    environment {
+        CI = 'true'
+    }
+
     stages {
+        stage('Checkout') {
+            steps {
+                echo '=== Checkout GitHub ==='
+                checkout scm
+            }
+        }
+
         stage('Install Dependencies') {
             steps {
-                echo '=== Bước 1: Cài đặt thư viện dependencies cho Frontend ==='
                 dir('frontend') {
-                    sh 'npm install'
+                    sh 'npm ci'
                 }
             }
         }
 
         stage('Test Frontend') {
             steps {
-                echo '=== Bước 2: Chạy kiểm thử tự động (Kiểm tra nút Đăng ký, Đăng nhập) ==='
                 dir('frontend') {
-                    sh 'npm test'
+                    sh 'npm run test:ci'
                 }
             }
         }
 
         stage('Build Frontend') {
             steps {
-                echo '=== Bước 3: Biên dịch dự án React sang thư mục dist ==='
                 dir('frontend') {
                     sh 'npm run build'
+                }
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('SonarQube') {
+                    script {
+                        def scannerHome = tool 'sonar-scanner'
+                        sh "${scannerHome}/bin/sonar-scanner"
+                    }
+                }
+            }
+        }
+
+        stage('Quality Gate') {
+            steps {
+                timeout(time: 10, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
                 }
             }
         }
@@ -35,10 +64,11 @@ pipeline {
 
     post {
         success {
-            echo '🎉 Pipeline CI/CD thành công: Mã nguồn đã vượt qua kiểm thử và build thành công!'
+            echo 'Jenkins + SonarQube SUCCESS!'
         }
+
         failure {
-            echo '❌ Pipeline thất bại: Vui lòng kiểm tra lại log chi tiết ở bước lỗi.'
+            echo 'Pipeline FAILED!'
         }
     }
 }
