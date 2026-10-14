@@ -27,12 +27,12 @@ pipeline {
         }
 
         stage('Test Frontend') {
-            steps {
-                dir('frontend') {
-                    sh 'npm run test:ci'
-                }
-            }
+    steps {
+        dir('frontend') {
+            sh 'npm test'
         }
+    }
+}
 
         stage('Build Frontend') {
             steps {
